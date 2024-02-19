@@ -175,6 +175,12 @@ padding: 10px;
 box-sizing: border-box;
 }
 
+.content a {
+    text-decoration: underline;
+    color: #0000EE;
+    cursor: pointer;
+}
+
 .total_results {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -229,8 +235,8 @@ display: inline-block;
 }
 
 .when {
-font-weight: bold;
-color: #70f;
+color: #888;
+font-size: 0.8em;
 margin-right: 4px;
 }
 

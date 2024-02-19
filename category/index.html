@@ -58,6 +58,7 @@
     const showLockForm = (index) => {
         document.getElementById('likeForm_' + index).style.display = 'block';
         document.getElementById('likeForm_' + index).style.visibility = 'visible';
+        document.getElementById('lockHere_' + index).style.display = 'none';
     }
     const showPrevPageButton = (category, skip) => {
         skip = skip - postsPerPage;
@@ -140,9 +141,9 @@
             posts[i].content = newLinesToBr(urlify(posts[i].content))
 
             postsHTML += `<div class="post">
-            <div class="header">
-              <a href="${posts[i].txid}"><span class="from">${posts[i].txid.slice(0,12)}...</span></a>
-              <a href="${posts[i].url}"><span class="when">${timeAgo(posts[i].txTimestamp * 1000)}</span> </a>
+            <div class="header2">
+              <a href="${posts[i].url}"><span class="txid">${posts[i].url}</span></a>
+              <span class="when">${timeAgo(posts[i].txTimestamp * 1000)}</span>
 
               <span class="bar">
                 <a onclick="showLockForm(${i})"><span class="amount pill"><span id="postBSVValue_${i}">${posts[i].bsv}</span> ₿</span></a>
@@ -151,14 +152,8 @@
             </div>
             <div class="body">
               <div class="summary">
-                <div class="header2">
-                  <a href="${posts[i].url}">
-                    <span class="txid">
-                      ${posts[i].url}
-                    </span>
-                  </a>
-                </div>
                 ${posts[i].content}
+                <br><a onclick="showLockForm(${i})" class="lockButton" id="lockHere_${i}">Lock!</a>
               </div>
             </div>
             <div class="popupForm hidden" id="likeForm_${i}">
