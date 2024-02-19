@@ -246,6 +246,7 @@ margin: 0px 2px;
 .amount {
 color: white;
 background: #fb3;
+cursor: pointer;
 }
 
 .app {
