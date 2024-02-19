@@ -1,0 +1,102 @@
+<html class="main">
+    <head>
+        <title>Lockmarks.com - The Bitcoin Directory</title>
+        <meta name="description" content="Lockmarks.com - The Bitcoin Directory based on locked coins.  Lock coins to URLs.">
+        <meta name=”robots” content="index, follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <meta property="og:title" content="Lockmarks.com - The Bitcoin Directory<">
+        <meta property="og:image" content="/assets/marker-icon-2x-bit-1.png">
+
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+        <link rel="manifest" href="/assets/site.webmanifest">
+
+        <link href="/styles/shuallet.css" rel="stylesheet" type="text/css">
+        <script src="/scripts/bsv.browser.min.js"></script>
+        <script src="/scripts/lockmarks.js"></script>
+        <link href="/styles/styles.css" rel="stylesheet">
+
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+    </head>
+    <body class="main">
+
+      <div class="container">
+        <div id="landingPage">
+          <center>
+            <img src="/assets/logo.png" srcset="/assets/logo@2x.png 2x, /assets/logo@3x.png 3x">
+            <h1>Lockmarks.com - The Bitcoin Directory</h1>
+            <div class="main">
+                <div class="sbox">
+                    <input type="text" name="searchText" id="searchText" title="Chart Bitcoin Locks" placeholder="Browse category" autocomplete="off">
+                </div>
+
+                <div class="buttons">
+                    <input value="Search" type="submit" id="searchButton" onClick="makeSearch()">
+                    <a href="/add/"><input value="Add item" type="submit" id="addButton"></a>
+                </div>
+            </div>
+          </center>
+        </div>
+
+        <div class="content">
+            <div style="justify-content: center; text-align: center;">
+              <span class="total_results">Popular categories</span>
+              <div class="tab-row"></div>
+              <div class="tab-base"></div>
+              <div id="postsHTML"></div>
+            </div>
+        </div>
+      </div>
+
+    <script src="/scripts/jdenticon.min.js"></script>
+    <script src="/scripts/shuallet.bundle.js"></script>
+    </body>
+</html>
+
+<script language='javascript'>
+
+    const makeSearch = () => {
+        const encodedSearchText = encodeURIComponent(document.getElementById('searchText').value);
+            window.location.href = `/category/?category=${encodedSearchText}`;
+    }
+
+    const populatePostsHTML = () => {
+        let postsHTML = "";
+        for (let i = 0; i < posts.length; i++) {
+            postsHTML += `<div class="post">
+            <div class="header">
+              <a href="/category/?category=${posts[i].category}"><span class="from">${posts[i].category.slice(0,255)}</span></a>
+            </div>
+          </div>`
+        }
+        document.getElementById('postsHTML').innerHTML = postsHTML;
+        jdenticon()
+    }
+
+    const getCategories = async () => {
+        const r = await fetch(`${dataURL}getLockmarkCategories/`)
+        const res = await r.text();
+        return JSON.parse(res);
+    }
+
+    const populatePosts = async() => {
+        posts = await getCategories()
+        console.log(posts)
+        populatePostsHTML()
+    }
+
+    (async () => {
+        await populatePosts()
+    })().catch(e => console.log("Caught: " + e)); // Catches it.
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if(!localStorage.getItem('disclaimerShown')) {
+            alert("Disclaimer\n\nPlease be reminded that we accept no responsibility for any financial losses occurred to users as a result of using this app. Use at your own risk.")
+            localStorage.setItem('disclaimerShown', 1)
+        }
+    })
+</script>

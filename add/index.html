@@ -1,0 +1,130 @@
+<html class="main">
+    <head>
+        <title>Lockmarks.com - Add URL</title>
+        <meta name="description" content="Lockmarks.com - Add URL to the Bitcoin Directory">
+        <meta name=”robots” content="index, follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <meta property="og:title" content="Lockmarks.com - Add URLs">
+        <meta property="og:image" content="/assets/marker-icon-2x-bit-1.png">
+
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+        <link rel="manifest" href="/assets/site.webmanifest">
+
+        <link href="/styles/shuallet.css" rel="stylesheet" type="text/css">
+        <script src="/scripts/bsv.browser.min.js"></script>
+        <script src="/scripts/lockmarks.js"></script>
+        <link href="/styles/styles.css" rel="stylesheet">
+
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+    </head>
+    <body class="main">
+
+      <div class="container">
+        <div class="navbar">
+          <a href="/">Home</a>
+          <a href="/add/">Add URL</a>
+          <a href="/wallet/">Wallet</a>
+        </div>
+
+
+        <div class="grid chartGrid">
+            <div class="resultTable">
+              <div class="resultTable-container resultTable-separator">
+                <div class="resultTable-title">
+                  Add URL
+                </div>
+              </div>
+              <div id="rankingTable">
+                <div class="popupForm"><input type="text" id="newPostURL" class="long" placeholder="URL (required)"></div>
+                <div class="popupForm"><input type="text" id="newPostCategory" class="long" placeholder="Category"></div>
+                <div class="popupForm"><textarea id="newPostContent" placeholder="Description"></textarea></div>
+
+                <div class="popupForm">
+                    <button id="newPostButton" onclick="addPost()">Add</button>
+                </div>
+              </div>
+            </div>
+        </div>
+
+      </div>
+
+    <script src="/scripts/jdenticon.min.js"></script>
+    <script src="/scripts/shuallet.bundle.js"></script>
+    </body>
+</html>
+
+<script language='javascript'>
+    const isValidHttpUrl = (string) => {
+      let url;
+      
+      try {
+        url = new URL(string);
+      } catch (_) {
+        return false;  
+      }
+
+      return url.protocol === "http:" || url.protocol === "https:";
+    }
+
+    const addPost = async() => {
+        if (!localStorage.walletAddress) {
+            alert("You must have a wallet to add posts")
+            window.location.href = '/wallet/';
+        }
+        var url = document.getElementById('newPostURL').value;
+        if (!url || !isValidHttpUrl(url)) {
+            alert(`Valid URL field is required`);
+            return;
+        }
+        var category = document.getElementById('newPostCategory').value;
+        var description = document.getElementById('newPostContent').value;
+        document.getElementById("newPostButton").disabled = true;
+
+        const currentHeight = await getBlock();
+        let lockHeight = parseInt(currentHeight) + 144*365;
+        let satoshis = 1;
+        let content = `[${url}] [${category}] ${description}`;
+
+        let rawtx = lockPost(localStorage.walletAddress, lockHeight, satoshis, null, content, null);
+        if (rawtx) {
+            const c = 1;
+            if (c) {
+                rawtx = await payForRawTx(rawtx)
+                const t = await broadcast(rawtx, true, localStorage.walletAddress);
+                if (t.length === 64) {
+                    addTx({'txid': t, 'height': lockHeight, 'satoshis': satoshis})
+                    alert(`URL added: ${t}`);
+
+                    document.getElementById('newPostURL').value = ""
+                    document.getElementById('newPostCategory').value = ""
+                    document.getElementById('newPostContent').value = ""
+                    document.getElementById("newPostButton").disabled = false;
+                } else {
+                    alert(t)
+                    document.getElementById("newPostButton").disabled = false;
+                }
+            } else { 
+                document.getElementById("newPostButton").disabled = false;
+                return
+            }
+        } else {
+            document.getElementById("newPostButton").disabled = false;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if (getUrlVars()["category"]) {
+            var category = decodeURIComponent(getUrlVars()["category"])
+            document.getElementById('newPostCategory').value = category
+        }
+        if(!localStorage.getItem('disclaimerShown')) {
+            alert("Disclaimer\n\nPlease be reminded that we accept no responsibility for any financial losses occurred to users as a result of using this app. Use at your own risk.")
+            localStorage.setItem('disclaimerShown', 1)
+        }
+    })
+</script>

@@ -1,0 +1,224 @@
+<html>
+    <head>
+        <title>Lockmarks.com - category</title>
+        <meta name="description" content="Lock bits of information.">
+        <meta name=”robots” content="index, follow">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8">
+        <meta property="og:title" content="Lockmarks.com - The Bitcoin Directory based on locked coins.  Lock coins to URLs">
+        <meta property="og:image" content="/assets/marker-icon-2x-bit-1.png">
+
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+        <link rel="manifest" href="/assets/site.webmanifest">
+
+        <link href="/styles/shuallet.css" rel="stylesheet" type="text/css">
+        <script src="/scripts/bsv.browser.min.js"></script>
+        <script src="/scripts/lockmarks.js"></script>
+        <link href="/styles/styles.css" rel="stylesheet">
+
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+    </head>
+    <body class="category">
+
+      <div class="container">
+        <div class="navbar">
+          <a href="/">Home</a>
+          <a href="/add/">Add URL</a>
+          <a href="/wallet/">Wallet</a>
+        </div>
+
+        <div class="content">
+          <span class="total_results" id="categoryTitle"></span>
+          <div class="tab-row"></div>
+          <div class="tab-base"></div>
+          <div id="postsHTML"></div>
+          <div id="footer">
+            <a id="prevPage">Previous</a>
+            <a href="?q=test&amp;p=0&amp;s=10&amp;r=best&amp;t=all" id="currentPage" class="selected">1</a>
+            <a id="nextPage">Next</a>
+          </div>
+        </div>
+
+      </div>
+
+    <script src="/scripts/jdenticon.min.js"></script>
+    <script src="/scripts/shuallet.bundle.js"></script>
+    </body>
+</html>
+
+<script language='javascript'>
+    var category;
+    var posts = [];
+    var postsPerPage = 20
+
+    const showLockForm = (index) => {
+        document.getElementById('likeForm_' + index).style.display = 'block';
+        document.getElementById('likeForm_' + index).style.visibility = 'visible';
+    }
+    const showPrevPageButton = (category, skip) => {
+        skip = skip - postsPerPage;
+        if (skip < 0) skip = 0;
+        document.getElementById('prevPageLink').href = `/category/?category=${category}&skip=${skip}`;
+        document.getElementById('prevPage').style.display = 'flex';
+        document.getElementById('prevPage').style.visibility = 'visible';
+    }
+    const showNextPageButton = (category, skip) => {
+        skip = skip + postsPerPage;
+        document.getElementById('nextPageLink').href = `/category/?category=${category}&skip=${skip}`;
+        document.getElementById('nextPage').style.display = 'flex';
+        document.getElementById('nextPage').style.visibility = 'visible';
+    }
+
+    const likePost = async (index) => {
+        if (!localStorage.walletAddress) {
+            alert("You must have a wallet to like urls")
+            window.location.href = '/wallet/';
+        }
+        document.getElementById("lockToPost").disabled = true;
+
+        const currentHeight = await getBlock();
+        const lockHeight = parseInt(currentHeight) + parseInt(document.getElementById(`likeBlocks_${index}`).value);
+        const lockedBSVs = parseFloat(document.getElementById(`likeCoins_${index}`).value)
+        let satoshis = parseInt(lockedBSVs * 100000000);
+        const txid = posts[index].txid;
+
+        let rawtx = lockLike(localStorage.walletAddress, lockHeight, satoshis, null, txid, null);
+        if (rawtx) {
+            var c;
+            if (lockedBSVs > 0.01) {
+                c = confirm(`Like ${txid} (${lockedBSVs} BSV for ${lockHeight - currentHeight} blocks)?`);
+            } else {
+                c = 1;
+            }
+            if (c) {
+                rawtx = await payForRawTx(rawtx)
+                const t = await broadcast(rawtx, true, localStorage.walletAddress);
+                if (t.length === 64) {
+                    addTx({'txid': t, 'height': lockHeight, 'satoshis': satoshis})
+                    posts[index].bsv = parseFloat(posts[index].bsv) + parseFloat(lockedBSVs)
+                    posts[index].bsv = posts[index].bsv.toFixed(6);
+                    posts[index].satoshis += satoshis
+                    document.getElementById('postBSVValue_' + index).innerHTML = posts[index].bsv;
+
+                    alert(`URL liked: ${t}`);
+
+                    document.getElementById("lockToPost").disabled = false;
+                } else {
+                    alert(t)
+                    document.getElementById("lockToPost").disabled = false;
+                }
+            } else { 
+                document.getElementById("lockToPost").disabled = false;
+                return 
+            }
+        } else {
+            document.getElementById("lockToPost").disabled = false;
+        } 
+    }
+    const populatePostsHTML = () => {
+        let postsHTML = "";
+
+        if (posts.length === 0) {
+            document.getElementById('postsHTML').innerHTML = `No items found. <a href="/add/?category=${encodeURIComponent(category)}">Add one?</a>`;
+            return
+        }
+
+        for (let i = 0; i < posts.length; i++) {
+            const [beforeDot, afterDot] = String(posts[i].satoshis / 100000000).split('.');
+            if (afterDot) {
+                const afterDotTrimmed = afterDot.slice(0, 6);
+                posts[i].bsv = parseFloat(beforeDot + '.' + afterDotTrimmed);
+            } else {
+                posts[i].bsv = parseFloat(beforeDot)
+            }
+            if (posts[i].content === null || posts[i].content === undefined) posts[i].content = "";
+
+            posts[i].content = newLinesToBr(urlify(posts[i].content))
+
+            postsHTML += `<div class="post">
+            <div class="header">
+              <a href="${posts[i].txid}"><span class="from">${posts[i].txid.slice(0,12)}...</span></a>
+              <a href="${posts[i].url}"><span class="when">${timeAgo(posts[i].txTimestamp * 1000)}</span> </a>
+
+              <span class="bar">
+                <a onclick="showLockForm(${i})"><span class="amount pill"><span id="postBSVValue_${i}">${posts[i].bsv}</span> ₿</span></a>
+                <a href="https://whatsonchain.com/tx/${posts[i].txid}" target="_blank"><span class="woc pill">woc</span></a>
+              </span>
+            </div>
+            <div class="body">
+              <div class="summary">
+                <div class="header2">
+                  <a href="${posts[i].url}">
+                    <span class="txid">
+                      ${posts[i].url}
+                    </span>
+                  </a>
+                </div>
+                ${posts[i].content}
+              </div>
+            </div>
+            <div class="popupForm hidden" id="likeForm_${i}">
+                    Lock <input id="likeCoins_${i}" type="number" name="coins" placeholder="BSV" value="0.01"> BSV for 
+                    <select id="likeBlocks_${i}" name="blocks" type="number">
+                        <option value="6">1 hour</option>
+                        <option value="144">1 day</option>
+                        <option value="1008">7 days</option>
+                        <option value="10950">30 days</option>
+                        <option value="52560" selected="selected">1 year</option>
+                        <option value="525600">10 years</option>
+                    </select>
+                    <button id="lockToPost" onclick="likePost(${i})">lock</button>
+                </div>
+            </div>
+          </div>`
+        }
+        document.getElementById('postsHTML').innerHTML = postsHTML;
+        jdenticon()
+    }
+
+    const getURLs = async (category, skip = 0) => {
+        const r = await fetch(`${dataURL}getLockmarks/`, {
+            method: 'post',
+            body: JSON.stringify({ category, skip })
+        })
+        const res = await r.text();
+        return JSON.parse(res);
+    }
+
+    const populatePosts = async(category, skip = 0) => {
+        posts = await getURLs(category, skip)
+        console.log(posts)
+        populatePostsHTML()
+
+        if (skip > 0) {
+            showPrevPageButton(category, skip)
+        }
+        if (posts.length === postsPerPage) {
+            showNextPageButton(category, skip)
+        }
+        var currentPage = parseInt(skip/postsPerPage) + 1
+        document.getElementById('categoryTitle').innerHTML = category;
+        document.getElementById('currentPage').innerHTML = currentPage;
+    }
+    (async () => {
+        if (getUrlVars()["category"]) {
+            category = decodeURIComponent(getUrlVars()["category"])
+            document.title = `Lockmarks.com - ${category}`;
+        }
+        var skip = 0
+        if (getUrlVars()["skip"]) skip = parseInt(getUrlVars()["skip"])
+
+        await populatePosts(category, skip)
+    })().catch(e => console.log("Caught: " + e)); // Catches it.
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if(!localStorage.getItem('disclaimerShown')) {
+            alert("Disclaimer\n\nPlease be reminded that we accept no responsibility for any financial losses occurred to users as a result of using this app. Use at your own risk.")
+            localStorage.setItem('disclaimerShown', 1)
+        }
+    })
+</script>
