@@ -759,18 +759,14 @@ const normalizeUTXOs = utxos => {
     })
 }
 const getUTXOs = async (address, use_woc = 0) => {
-    // const utxos = await getCachedUTXOs();
+    const utxos = await getCachedUTXOs();
     // if (!utxos.length || use_woc === 1) {
-        // console.log(`Calling WhatsOnChain UTXOs endpoint...`);
-        // const r1 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/confirmed/unspent`);
-        // const res1 = await r1.json();
-        // const r2 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unconfirmed/unspent`);
-        // const res2 = await r2.json();
-        // return normalizeUTXOs(res1.result.concat(res2.result));
-
-        const r = await fetch(`https://api.bitails.io/address/${address}/unspent`);
-        const { unspent } = await r.json();
-        return normalizeUTXOs(unspent);
+        console.log(`Calling WhatsOnChain UTXOs endpoint...`);
+        const r1 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/confirmed/unspent`);
+        const res1 = await r1.json();
+        const r2 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unconfirmed/unspent`);
+        const res2 = await r2.json();
+        return normalizeUTXOs(res1.result.concat(res2.result));
     // } else { return utxos }
 }
 const btUTXOs = async address => {
