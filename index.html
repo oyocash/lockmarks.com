@@ -1,4 +1,4 @@
-<html class="main">
+<html>
     <head>
         <title>Lockmarks.com - The Bitcoin Directory</title>
         <meta name="description" content="Lockmarks.com - The Bitcoin Directory based on locked coins.  Lock coins to URLs.">
@@ -22,34 +22,22 @@
         <meta http-equiv="Pragma" content="no-cache" />
         <meta http-equiv="Expires" content="0" />
     </head>
-    <body class="main">
+    <body class="category">
 
       <div class="container">
-        <div id="landingPage">
-          <center>
-            <img src="/assets/logo.png" srcset="/assets/logo@2x.png 2x, /assets/logo@3x.png 3x">
-            <h1>Lockmarks.com<br>The Bitcoin Directory</h1>
-            <div class="main">
-                <div class="sbox">
-                    <input type="text" name="searchText" id="searchText" title="Browse category" placeholder="Browse category" autocomplete="off">
-                </div>
-
-                <div class="buttons">
-                    <input value="Search" type="submit" id="searchButton" onClick="makeSearch()">
-                    <a href="/add/"><input value="Add URL" type="submit" id="addButton"></a>
-                </div>
-            </div>
-          </center>
+        <div class="navbar">
+          <a href="/">Home</a>
+          <a href="/add/">Add URL</a>
+          <a href="/wallet/">Wallet</a>
         </div>
 
         <div class="content">
-            <div style="justify-content: center; text-align: center;">
-              <span class="total_results">Popular categories</span>
-              <div class="tab-row"></div>
-              <div class="tab-base"></div>
-              <div id="postsHTML"></div>
-            </div>
+          <span class="total_results" id="categoryTitle">Lockmarks - the Bitcoin Directory</span>
+          <div class="tab-row"></div>
+          <div class="tab-base"></div>
+          <div id="postsHTML"></div>
         </div>
+
       </div>
 
     <script src="/scripts/jdenticon.min.js"></script>
@@ -64,12 +52,127 @@
             window.location.href = `/category/?category=${encodedSearchText}`;
     }
 
+    var posts = [];
+
+    const showLockForm = (index) => {
+        document.getElementById('likeForm_' + index).style.display = 'block';
+        document.getElementById('likeForm_' + index).style.visibility = 'visible';
+        document.getElementById('lockHere_' + index).style.display = 'none';
+    }
+    const likePost = async (index) => {
+        if (!localStorage.walletAddress) {
+            alert("You must have a wallet to like urls")
+            window.location.href = '/wallet/';
+        }
+        document.getElementById("lockToPost").disabled = true;
+
+        const currentHeight = await getBlock();
+        const lockHeight = parseInt(currentHeight) + parseInt(document.getElementById(`likeBlocks_${index}`).value);
+        const lockedBSVs = parseFloat(document.getElementById(`likeCoins_${index}`).value)
+        let satoshis = parseInt(lockedBSVs * 100000000);
+        const txid = posts[index].txid;
+
+        let rawtx = lockLike(localStorage.walletAddress, lockHeight, satoshis, null, txid, null);
+        if (rawtx) {
+            var c;
+            if (lockedBSVs > 0.01) {
+                c = confirm(`Like ${txid} (${lockedBSVs} BSV for ${lockHeight - currentHeight} blocks)?`);
+            } else {
+                c = 1;
+            }
+            if (c) {
+                rawtx = await payForRawTx(rawtx)
+                const t = await broadcast(rawtx, true, localStorage.walletAddress);
+                if (t.length === 64) {
+                    addTx({'txid': t, 'height': lockHeight, 'satoshis': satoshis})
+                    posts[index].bsv = parseFloat(posts[index].bsv) + parseFloat(lockedBSVs)
+                    posts[index].bsv = posts[index].bsv.toFixed(6);
+                    posts[index].satoshis += satoshis
+                    document.getElementById('postBSVValue_' + index).innerHTML = posts[index].bsv;
+
+                    alert(`URL liked: ${t}`);
+
+                    document.getElementById("lockToPost").disabled = false;
+                } else {
+                    alert(t)
+                    document.getElementById("lockToPost").disabled = false;
+                }
+            } else { 
+                document.getElementById("lockToPost").disabled = false;
+                return 
+            }
+        } else {
+            document.getElementById("lockToPost").disabled = false;
+        } 
+    }
     const populatePostsHTML = () => {
         let postsHTML = "";
+
         for (let i = 0; i < posts.length; i++) {
+            const [beforeDot, afterDot] = String(posts[i].satoshis / 100000000).split('.');
+            if (afterDot) {
+                const afterDotTrimmed = afterDot.slice(0, 6);
+                posts[i].bsv = parseFloat(beforeDot + '.' + afterDotTrimmed);
+            } else {
+                posts[i].bsv = parseFloat(beforeDot)
+            }
+            if (posts[i].content === null || posts[i].content === undefined) posts[i].content = "";
+
+            posts[i].content = newLinesToBr(urlify(posts[i].content))
+
             postsHTML += `<div class="post">
-            <div class="header">
-              <a href="/category/?category=${posts[i].category}"><span class="from">${posts[i].category.slice(0,255)}</span></a>
+            <div class="header2">
+              <a href="${posts[i].url}"><span class="txid">${posts[i].url}</span></a>
+              <span class="when">${timeAgo(posts[i].txTimestamp * 1000)}</span>
+
+              <span class="bar">
+                <a href="https://whatsonchain.com/tx/${posts[i].txid}" target="_blank"><span class="woc pill">woc</span></a>
+              </span>
+            </div>
+            <div class="body">
+              <div class="summary">
+                ${posts[i].content}
+              </div>
+            </div>
+
+            <div class="post-bottom">
+                <div class="lock">
+                    <div><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" onclick="showLockForm('${i}')">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                            <path d="M12.5 21h-5.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 1.74 1.012"></path>
+                            <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"></path>
+                            <path d="M8 11v-4a4 4 0 1 1 8 0v4"></path>
+                            <path d="M16 19h6"></path>
+                            <path d="M19 16v6"></path>
+                        </svg>
+                    </div><button data-drawer-body-scrolling="false" class="value-button"><span class="value" id="postBSVValue_${i}">${posts[i].bsv}</span><svg class="bitcoin" stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                            <title></title>
+                            <path d="M14.648 14.423l.003-.004a1.34 1.34 0 0 1-.498.659c-.269.189-.647.338-1.188.364l-1.99.004v-2.93c.288.008 1.565-.013 2.119.015.722.035 1.171.321 1.41.668.262.351.293.82.144 1.224zm-2.129-3.261c.503-.024.852-.162 1.101-.336.214-.146.375-.367.46-.611.134-.375.107-.81-.136-1.135-.223-.319-.638-.584-1.306-.616-.495-.026-1.413-.003-1.664-.01v2.709c.025.004 1.539-.001 1.545-.001zM24 12c0 6.627-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0s12 5.373 12 12zm-6.65 2.142c.022-1.477-1.24-2.332-1.908-2.572.715-.491 1.206-1.043 1.206-2.085 0-1.655-1.646-2.43-2.647-2.529-.082-.009-.31-.013-.31-.013V5.361h-1.633l.004 1.583H10.97V5.367H9.31v1.569c-.292.007-2.049.006-2.049.006v1.401h.571c.601.016.822.362.798.677v6.041a.408.408 0 0 1-.371.391c-.249.011-.621 0-.621 0l-.32 1.588h1.996v1.6h1.661v-1.591h1.091v1.594h1.624v-1.588c1.899.05 3.643-1.071 3.66-2.913z"></path>
+                        </svg></button>
+                </div>
+
+                <div class="comment">
+                    <div class="comment-wrapper"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20"" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" fill="none" width="20" height="20"/>
+                        <g>
+                        <path d="M5 7h13v10H2V4h7l2 2H4v9h1V7z"/>
+                        </g>
+                        </svg><span class="value"><a href="/category/?category=${encodeURIComponent(posts[i].category)}" title="${posts[i].category} links">${posts[i].category}</a></span>
+                    </div>
+                </div>
+            </div>
+            <div class="popupForm hidden" id="likeForm_${i}">
+                    Lock <input id="likeCoins_${i}" type="number" name="coins" placeholder="BSV" value="0.01"> BSV for 
+                    <select id="likeBlocks_${i}" name="blocks" type="number">
+                        <option value="6">1 hour</option>
+                        <option value="144">1 day</option>
+                        <option value="1008">7 days</option>
+                        <option value="10950">30 days</option>
+                        <option value="52560" selected="selected">1 year</option>
+                        <option value="525600">10 years</option>
+                    </select>
+                    <button id="lockToPost" onclick="likePost(${i})">lock</button>
+                </div>
             </div>
           </div>`
         }
@@ -77,16 +180,21 @@
         jdenticon()
     }
 
-    const getCategories = async () => {
-        const r = await fetch(`${dataURL}getLockmarkCategories/`)
+    const getURLs = async () => {
+        let skip = 0;
+        const r = await fetch(`${dataURL}getTopLockmarks/`, {
+            method: 'post',
+            body: JSON.stringify({ skip })
+        })
         const res = await r.text();
         return JSON.parse(res);
     }
 
     const populatePosts = async() => {
-        posts = await getCategories()
+        posts = await getURLs()
         console.log(posts)
         populatePostsHTML()
+
     }
 
     (async () => {
