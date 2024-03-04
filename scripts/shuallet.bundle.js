@@ -762,11 +762,14 @@ const getUTXOs = async (address, refresh = 0) => {
     const utxos = await getCachedUTXOs();
     if (!utxos.length || refresh === 1) {
         console.log(`Calling WhatsOnChain UTXOs endpoint...`);
-        const r1 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/confirmed/unspent`);
-        const res1 = await r1.json();
-        const r2 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unconfirmed/unspent`);
-        const res2 = await r2.json();
-        return normalizeUTXOs(res1.result.concat(res2.result));
+        const r = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unspent`);
+        const res = await r.json();
+        return normalizeUTXOs(res);
+        // const r1 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/confirmed/unspent`);
+        // const res1 = await r1.json();
+        // const r2 = await fetch(`https://api.whatsonchain.com/v1/bsv/main/address/${address}/unconfirmed/unspent`);
+        // const res2 = await r2.json();
+        // return normalizeUTXOs(res1.result.concat(res2.result));
     } else { return utxos }
 }
 const btUTXOs = async address => {
