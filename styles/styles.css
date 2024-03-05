@@ -335,6 +335,8 @@ flex: 1;
     font-weight: 400;
     margin: 0px 0px 0px 4px;
     padding: 0px;
+    box-sizing: border-box;
+    border: 0px solid rgb(229, 231, 235);
 }
 
 .post-bottom .value {
