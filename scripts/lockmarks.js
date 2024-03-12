@@ -1,5 +1,5 @@
 window.dataURL = "https://data.trends.cash:9007/"
-window.app = "hodlocker.com"
+window.app = "lockmarks.com"
 
 var getUrlVars = function() {
   var vars = {};
