@@ -1,11 +1,11 @@
 <html>
     <head>
-        <title>Lockmarks.com - The Bitcoin Directory</title>
-        <meta name="description" content="Lockmarks.com - The Bitcoin Directory based on locked coins.  Lock coins to URLs.">
+        <title>Lockmarks.com - search</title>
+        <meta name="description" content="Search the Bitcoin directory.">
         <meta name=”robots” content="index, follow">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta charset="UTF-8">
-        <meta property="og:title" content="Lockmarks.com - The Bitcoin Directory">
+        <meta property="og:title" content="Lockmarks.com - Search the Bitcoin directory">
         <meta property="og:image" content="/assets/logo@2x.png">
 
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
@@ -32,14 +32,15 @@
         </div>
 
         <div class="content">
-          <span class="total_results" id="categoryTitle">Lockmarks - the Bitcoin Directory</span>
-
-            <form class="main" method="get" action="/search?language=English">
-              <input id="searchQuery" type="text" name="q" autofocus="" autocomplete="off" placeholder="Search...">
-            </form>
+          <span class="total_results" id="categoryTitle"></span>
           <div class="tab-row"></div>
           <div class="tab-base"></div>
           <div id="postsHTML"></div>
+          <div id="footer">
+            <a id="prevPage">Previous</a>
+            <a href="?q=test&amp;p=0&amp;s=10&amp;r=best&amp;t=all" id="currentPage" class="selected">1</a>
+            <a id="nextPage">Next</a>
+          </div>
         </div>
 
       </div>
@@ -50,19 +51,29 @@
 </html>
 
 <script language='javascript'>
-
-    const makeSearch = () => {
-        const encodedSearchText = encodeURIComponent(document.getElementById('searchText').value);
-            window.location.href = `/category/?category=${encodedSearchText}`;
-    }
-
+    var q;
     var posts = [];
+    var postsPerPage = 20
 
     const showLockForm = (index) => {
         document.getElementById('likeForm_' + index).style.display = 'block';
         document.getElementById('likeForm_' + index).style.visibility = 'visible';
         document.getElementById('lockHere_' + index).style.display = 'none';
     }
+    const showPrevPageButton = (q, skip) => {
+        skip = skip - postsPerPage;
+        if (skip < 0) skip = 0;
+        document.getElementById('prevPageLink').href = `/search/?q=${q}&skip=${skip}`;
+        document.getElementById('prevPage').style.display = 'flex';
+        document.getElementById('prevPage').style.visibility = 'visible';
+    }
+    const showNextPageButton = (q, skip) => {
+        skip = skip + postsPerPage;
+        document.getElementById('nextPageLink').href = `/search/?q=${q}&skip=${skip}`;
+        document.getElementById('nextPage').style.display = 'flex';
+        document.getElementById('nextPage').style.visibility = 'visible';
+    }
+
     const likePost = async (index) => {
         if (!localStorage.walletAddress) {
             alert("You must have a wallet to like urls")
@@ -111,6 +122,11 @@
     }
     const populatePostsHTML = () => {
         let postsHTML = "";
+
+        if (posts.length === 0) {
+            document.getElementById('postsHTML').innerHTML = `No items found. <a href="/add/">Add one?</a>`;
+            return
+        }
 
         for (let i = 0; i < posts.length; i++) {
             const [beforeDot, afterDot] = String(posts[i].satoshis / 100000000).split('.');
@@ -184,25 +200,41 @@
         jdenticon()
     }
 
-    const getURLs = async () => {
-        let skip = 0;
-        const r = await fetch(`${dataURL}getTopLockmarks/`, {
+    const getURLs = async (q, skip = 0) => {
+        console.log(q)
+        const r = await fetch(`${dataURL}getSearchedLockmarks/`, {
             method: 'post',
-            body: JSON.stringify({ skip })
+            body: JSON.stringify({ q, skip })
         })
         const res = await r.text();
         return JSON.parse(res);
     }
 
-    const populatePosts = async() => {
-        posts = await getURLs()
+    const populatePosts = async(q, skip = 0) => {
+        posts = await getURLs(q, skip)
         console.log(posts)
         populatePostsHTML()
 
+        if (skip > 0) {
+            showPrevPageButton(q, skip)
+        }
+        if (posts.length === postsPerPage) {
+            showNextPageButton(q, skip)
+        }
+        var currentPage = parseInt(skip/postsPerPage) + 1
+        document.getElementById('categoryTitle').innerHTML = `Search for "${q}"`;
+        document.getElementById('currentPage').innerHTML = currentPage;
     }
-
     (async () => {
-        await populatePosts()
+        if (getUrlVars()["q"]) {
+            q = decodeURIComponent(getUrlVars()["q"])
+            document.title = `Lockmarks.com - Search for "${q}"`;
+        }
+        var skip = 0
+        if (getUrlVars()["skip"]) skip = parseInt(getUrlVars()["skip"])
+
+        console.log(q)
+        await populatePosts(q, skip)
     })().catch(e => console.log("Caught: " + e)); // Catches it.
 
     document.addEventListener("DOMContentLoaded", function() {
